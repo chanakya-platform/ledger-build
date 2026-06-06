@@ -1,9 +1,15 @@
-FROM eclipse-temurin:17.0.6_10-jre-alpine
-RUN addgroup --system chanakyatech  && adduser -S -s /usr/sbin/nologin -G chanakyatech chanakyatech && mkdir -p /opt/chanakya
+FROM maven:3.9-eclipse-temurin-17-alpine AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
+COPY src src
+RUN mvn clean package -Dmaven.test.skip=true
+
+FROM eclipse-temurin:17-jre-alpine
+RUN addgroup --system chanakyatech && adduser -S -s /usr/sbin/nologin -G chanakyatech chanakyatech
 WORKDIR /opt/chanakya
-COPY target/chanakyatech-springboot-mysql-97397*****.jar app.jar
-COPY startup.sh startup.sh
+COPY --from=build /app/target/*.jar app.jar
 RUN chown -R chanakyatech:chanakyatech /opt/chanakya
 USER chanakyatech
 EXPOSE 8080
-ENTRYPOINT ["./startup.sh"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
