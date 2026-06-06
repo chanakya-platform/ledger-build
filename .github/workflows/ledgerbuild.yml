@@ -4,16 +4,19 @@ on:
   push:
     branches:
       - main
+      - 'cf-*'
+      - 'develop'
   pull_request:
     branches:
       - main
+      - develop
   
   workflow_dispatch:
    inputs:
      ECRURL:
       description: "ECR Registry URL"
       required: true
-      default: "081654307023.dkr.ecr.ap-south-1.amazonaws.com"
+      default: "145400477231.dkr.ecr.us-east-1.amazonaws.com/chanakya/ledger-build"
 
      APPREPO:
       description: "Docker Repo Name"
@@ -23,7 +26,7 @@ on:
      REGION:
       description: "AWS Region"
       required: true
-      default: "ap-south-1"  
+      default: "us-east-1"  
 
 jobs:
   build-and-scan:
@@ -105,7 +108,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.sonarcloud }}
         run: |
           mvn sonar:sonar \
-            -Dsonar.projectKey=chanakya-fintech_ledger-build \
+            -Dsonar.projectKey=chanakya_ledger-build \
             -Dsonar.organization=chanakya-fintech \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=$SONAR_TOKEN \
@@ -121,7 +124,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ inputs.REGION || 'ap-south-1' }}
+          aws-region: ${{ inputs.REGION || 'us-east-1' }}
 
       # -----------------------------
       # Login to Amazon ECR
@@ -135,7 +138,7 @@ jobs:
       # ----------------------------- 
       - name: Build and Push Docker Image
         env:
-          ECR_REGISTRY: ${{ inputs.ECRURL || '081654307023.dkr.ecr.ap-south-1.amazonaws.com' }}
+          ECR_REGISTRY: ${{ inputs.ECRURL || '145400477231.dkr.ecr.us-east-1.amazonaws.com/chanakya/ledger-build' }}
           REPOSITORY: ${{ inputs.APPREPO || 'chanakyatechledger' }}
           IMAGE_TAG: rel${{ github.run_number }}
         run: |
