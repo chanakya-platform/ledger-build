@@ -136,7 +136,7 @@ jobs:
       - name: Build and Push Docker Image
         env:
           ECR_REGISTRY: ${{ inputs.ECRURL || '059200471385.dkr.ecr.us-east-1.amazonaws.com' }}
-          REPOSITORY: ${{ inputs.APPREPO || 'chanakya/ledger-build' }}
+          REPOSITORY: ${{ inputs.APPREPO || 'ledger-build' }}
           IMAGE_TAG: rel${{ github.run_number }}
         run: |
           echo "Building Docker Image..."
@@ -151,7 +151,7 @@ jobs:
         run: |
           for i in {1..12}; do
             STATUS=$(aws ecr describe-image-scan-findings \
-              --repository-name ${{ inputs.APPREPO || 'chanakya/ledger-build' }} \
+              --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
               --image-id imageTag=rel${{ github.run_number }} \
               --query 'imageScanStatus.status' \
               --output text 2>/dev/null || echo "NOT_FOUND")
@@ -181,13 +181,13 @@ jobs:
         id: scan
         run: |
           CRITICAL=$(aws ecr describe-image-scan-findings \
-            --repository-name ${{ inputs.APPREPO || 'chanakya/ledger-build' }} \
+            --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
             --image-id imageTag=rel${{ github.run_number }} \
             --query 'imageScanFindings.findingSeverityCounts.CRITICAL' \
             --output text 2>/dev/null || echo 0)
 
           HIGH=$(aws ecr describe-image-scan-findings \
-            --repository-name ${{ inputs.APPREPO || 'chanakya/ledger-build' }} \
+            --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
             --image-id imageTag=rel${{ github.run_number }} \
             --query 'imageScanFindings.findingSeverityCounts.HIGH' \
             --output text 2>/dev/null || echo 0)
