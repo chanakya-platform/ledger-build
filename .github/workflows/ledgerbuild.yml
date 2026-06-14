@@ -16,12 +16,12 @@ on:
      ECRURL:
       description: "ECR Registry URL"
       required: true
-      default: "145400477231.dkr.ecr.us-east-1.amazonaws.com"
+      default: "059200471385.dkr.ecr.us-east-1.amazonaws.com"
 
      APPREPO:
       description: "Docker Repo Name"
       required: true
-      default: "chanakya/ledger-build"
+      default: "ledger-build"
 
      REGION:
       description: "AWS Region"
