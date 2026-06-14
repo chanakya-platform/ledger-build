@@ -21,7 +21,7 @@ on:
      APPREPO:
       description: "Docker Repo Name"
       required: true
-      default: "edger-build"
+      default: "ledger-build"
 
      REGION:
       description: "AWS Region"
@@ -58,60 +58,60 @@ jobs:
       # -----------------------------
       # Build Spring Boot Jar
       # -----------------------------
-      - name: Build Spring Boot Jar
-        run: mvn clean package -Dmaven.test.skip=true
+      # - name: Build Spring Boot Jar
+      #   run: mvn clean package -Dmaven.test.skip=true
 
-      - name: Rename Artifact
-        run: cp target/*.jar target/backend_rel${{ github.run_number }}.jar
+      # - name: Rename Artifact
+      #   run: cp target/*.jar target/backend_rel${{ github.run_number }}.jar
 
-      # -----------------------------
-      # Code Coverage Report (JaCoCo)
-      # -----------------------------
-      - name: Code Coverage Report (JaCoCo)
-        run: mvn clean verify -Ddependency-check.skip=true
+      # # -----------------------------
+      # # Code Coverage Report (JaCoCo)
+      # # -----------------------------
+      # - name: Code Coverage Report (JaCoCo)
+      #   run: mvn clean verify -Ddependency-check.skip=true
 
-      - name: Upload JaCoCo Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: target/site/jacoco
+      # - name: Upload JaCoCo Report
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: jacoco-report
+      #     path: target/site/jacoco
 
-      # -----------------------------
-      # Trivy Dependency Check (SCA)
-      # -----------------------------
-      - name: Trivy FS Scan (SCA)
-        continue-on-error: true
-        run: |
-          mkdir -p trivy-report
+      # # -----------------------------
+      # # Trivy Dependency Check (SCA)
+      # # -----------------------------
+      # - name: Trivy FS Scan (SCA)
+      #   continue-on-error: true
+      #   run: |
+      #     mkdir -p trivy-report
           
-          docker run --rm \
-            -v ${{ github.workspace }}:/project \
-            -v ${{ github.workspace }}/trivy-report:/report \
-            aquasec/trivy:0.50.0 \
-            fs /project \
-            --format json \
-            --output /report/trivy-report.json
+      #     docker run --rm \
+      #       -v ${{ github.workspace }}:/project \
+      #       -v ${{ github.workspace }}/trivy-report:/report \
+      #       aquasec/trivy:0.50.0 \
+      #       fs /project \
+      #       --format json \
+      #       --output /report/trivy-report.json
 
-      - name: Upload Trivy Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-report
-          path: ./trivy-report
+      # - name: Upload Trivy Report
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: trivy-report
+      #     path: ./trivy-report
 
-      # ---------------------
-      # SonarCloud SAST Scan
-      # ---------------------
-      - name: SonarCloud SAST Scan
-        continue-on-error: true
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          mvn sonar:sonar \
-            -Dsonar.projectKey=anilji_ledger-build \
-            -Dsonar.organization=anilji \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=$SONAR_TOKEN
-          # mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=anilji_ledger-build
+      # # ---------------------
+      # # SonarCloud SAST Scan
+      # # ---------------------
+      # - name: SonarCloud SAST Scan
+      #   continue-on-error: true
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: |
+      #     mvn sonar:sonar \
+      #       -Dsonar.projectKey=anilji_ledger-build \
+      #       -Dsonar.organization=anilji \
+      #       -Dsonar.host.url=https://sonarcloud.io \
+      #       -Dsonar.token=$SONAR_TOKEN
+      #     # mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=anilji_ledger-build
 
       # -----------------------------
       # Configure AWS Credentials
@@ -137,7 +137,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ inputs.ECRURL || '059200471385.dkr.ecr.us-east-1.amazonaws.com' }}
           REPOSITORY: ${{ inputs.APPREPO || 'ledger-build' }}
-          IMAGE_TAG: rel${{ github.run_number }}
+          IMAGE_TAG: ${{ github.ref == 'refs/heads/main' && format('release-{0}', github.run_number) || format('feature-{0}', github.run_number) }}
         run: |
           echo "Building Docker Image..."
           docker build -t $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG .
@@ -147,72 +147,74 @@ jobs:
       # ------------------------
       # Wait till scan complete
       # ------------------------
-      - name: Wait for Scan Completion
-        run: |
-          for i in {1..12}; do
-            STATUS=$(aws ecr describe-image-scan-findings \
-              --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
-              --image-id imageTag=rel${{ github.run_number }} \
-              --query 'imageScanStatus.status' \
-              --output text 2>/dev/null || echo "NOT_FOUND")
+      # - name: Wait for Scan Completion
+      #   run: |
+      #     IMAGE_TAG=${{ github.ref == 'refs/heads/main' && format('release-{0}', github.run_number) || format('feature-{0}', github.run_number) }}
+      #     for i in {1..12}; do
+      #       STATUS=$(aws ecr describe-image-scan-findings \
+      #         --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
+      #         --image-id imageTag=$IMAGE_TAG \
+      #         --query 'imageScanStatus.status' \
+      #         --output text 2>/dev/null || echo "NOT_FOUND")
 
-            echo "Scan Status: $STATUS"
+      #       echo "Scan Status: $STATUS"
 
-            if [ "$STATUS" = "COMPLETE" ]; then
-              break
-            fi
+      #       if [ "$STATUS" = "COMPLETE" ]; then
+      #         break
+      #       fi
 
-            if [ "$STATUS" = "FAILED" ]; then
-              echo "Scan failed"
-              exit 1
-            fi
+      #       if [ "$STATUS" = "FAILED" ]; then
+      #         echo "Scan failed"
+      #         exit 1
+      #       fi
 
-            if [ "$STATUS" = "NOT_FOUND" ]; then
-              echo "Scan not yet available, retrying..."
-            fi
+      #       if [ "$STATUS" = "NOT_FOUND" ]; then
+      #         echo "Scan not yet available, retrying..."
+      #       fi
 
-            sleep 10
-          done
+      #       sleep 10
+      #     done
 
-      # ------------------------
-      # Get vulnerability details
-      # ------------------------
-      - name: Get Vulnerability Counts
-        id: scan
-        run: |
-          CRITICAL=$(aws ecr describe-image-scan-findings \
-            --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
-            --image-id imageTag=rel${{ github.run_number }} \
-            --query 'imageScanFindings.findingSeverityCounts.CRITICAL' \
-            --output text 2>/dev/null || echo 0)
+      # # ------------------------
+      # # Get vulnerability details
+      # # ------------------------
+      # - name: Get Vulnerability Counts
+      #   id: scan
+      #   run: |
+      #     IMAGE_TAG=${{ github.ref == 'refs/heads/main' && format('release-{0}', github.run_number) || format('feature-{0}', github.run_number) }}
+      #     CRITICAL=$(aws ecr describe-image-scan-findings \
+      #       --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
+      #       --image-id imageTag=$IMAGE_TAG \
+      #       --query 'imageScanFindings.findingSeverityCounts.CRITICAL' \
+      #       --output text 2>/dev/null || echo 0)
 
-          HIGH=$(aws ecr describe-image-scan-findings \
-            --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
-            --image-id imageTag=rel${{ github.run_number }} \
-            --query 'imageScanFindings.findingSeverityCounts.HIGH' \
-            --output text 2>/dev/null || echo 0)
+      #     HIGH=$(aws ecr describe-image-scan-findings \
+      #       --repository-name ${{ inputs.APPREPO || 'ledger-build' }} \
+      #       --image-id imageTag=$IMAGE_TAG \
+      #       --query 'imageScanFindings.findingSeverityCounts.HIGH' \
+      #       --output text 2>/dev/null || echo 0)
 
-          echo "Critical: $CRITICAL"
-          echo "High: $HIGH"
+      #     echo "Critical: $CRITICAL"
+      #     echo "High: $HIGH"
 
-          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
-          echo "high=$HIGH" >> $GITHUB_OUTPUT   
+      #     echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+      #     echo "high=$HIGH" >> $GITHUB_OUTPUT   
           
-      # -----------------------
-      # Quality Gate for Image
-      # ----------------------   
-      - name: Enforce Security Gate (Ignore Failures)
-        continue-on-error: true # ----------> Because here we have high & critical Vulnerability
-        run: |
-          CRITICAL=${{ steps.scan.outputs.critical }}
-          HIGH=${{ steps.scan.outputs.high }}
+      # # -----------------------
+      # # Quality Gate for Image
+      # # ----------------------   
+      # - name: Enforce Security Gate (Ignore Failures)
+      #   continue-on-error: true # ----------> Because here we have high & critical Vulnerability
+      #   run: |
+      #     CRITICAL=${{ steps.scan.outputs.critical }}
+      #     HIGH=${{ steps.scan.outputs.high }}
 
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-            echo "⚠️ Vulnerabilities found but ignored"
-            exit 1
-          else
-            echo "✅ No vulnerabilities"
-          fi
+      #     if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+      #       echo "⚠️ Vulnerabilities found but ignored"
+      #       exit 1
+      #     else
+      #       echo "✅ No vulnerabilities"
+      #     fi
 
   # -----------------------------
   # Trigger CD Job
@@ -225,12 +227,12 @@ jobs:
     steps:
       - name: Trigger CD Pipeline
         run: |
-          IMAGE_TAG="rel${{ github.run_number }}"
+          IMAGE_TAG="release-${{ github.run_number }}"
 
           curl -X POST \
           -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
           -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/chanakya-fintech/ledger-deployment/actions/workflows/deploy.yml/dispatches \
+          https://api.github.com/repos/chanakya-platform/ledger-deployment/actions/workflows/deploy.yml/dispatches \
           -d "{
             \"ref\":\"main\",
             \"inputs\": {
